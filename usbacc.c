@@ -10,7 +10,7 @@
  * sudo apt-get install libusb-1.0-0-dev
  *
  * gcc usbacc.c -I/usr/include/ -o usbacc
- * -lusb-1.0 -I/usr/include/ -I/usr/include/libusb-1.0
+ * -lusb-1.0 -I/usr/include/ -I/usr/include/libusb-1.0 -pthreaad
  *
  * @based
  * http://android.serverbox.ch/?p=262
@@ -34,14 +34,13 @@
 
 #define LEN 2
 
-int mainPhase();
 int init(void);
 int deInit(void);
 int setupAccessory(void);
 int usbSendCtrl(char *buff, int req, int index);
 void error(int code);
 void status(int code);
-
+void *readHdlr(void * threadarg);
 
 struct libusb_device_handle* handle;
 char stop;
@@ -67,6 +66,7 @@ struct usbAccessory gadgetAccessory = {
 
 int main(int argc, char *argv[])
 {
+	pthread_t tid;
 	if(init() < 0)
 		return;
 
@@ -75,42 +75,31 @@ int main(int argc, char *argv[])
 		deInit();
 		return -1;
 	};
-
-	if(mainPhase() < 0)
-	{
-		fprintf(stdout, "Error during main phase\n");
-		deInit();
-		return -1;
-	}
+	pthread_create(&tid, NULL, readHdlr, NULL);
+	pthread_join(tid, NULL);
 
 	deInit();
 	fprintf(stdout, "Done, no errors\n");
 	return 0;
 }
 
-int mainPhase()
+void *readHdlr(void * threadarg)
 {
+	struct libusb_pollfd **poll_usb; 
+	struct pollfd pollfd_array[20];
+	int poll_ret, i,j, response, transferred;
 	unsigned char buffer[500000];
-	int response = 0;
-	static int transferred;
 
-	response = libusb_bulk_transfer(handle, EP_IN, buffer,
-									16384, &transferred, 0);
-	if (response < 0) {
-		error(response);
-		return -1;
-	}
-	fprintf(stdout, "msg: %s\n", buffer);
-
-	response = libusb_bulk_transfer(handle, EP_IN, buffer,
-									500000, &transferred,0);
-	if (response < 0) {
-		error(response);
-		return -1;
-	}
-	fprintf(stdout, "msg: %s\n", buffer);
+	for(;;) {
+		response =
+			libusb_bulk_transfer(handle, EP_IN, buffer, 500000, &transferred, 0);
+		if (response < 0) {
+			error(response);
+			return NULL;
+		}
+		fprintf(stdout, "msg: %s\n", buffer);
+    }
 }
-
 
 int init()
 {
@@ -135,11 +124,11 @@ int usbSendCtrl(char *buff, int req, int index)
 	int response = 0;
 
 	if (NULL != buff) {
-		response = libusb_control_transfer(handle, 0x40, req, 0,
-										   index, buff, strlen(buff), 0);
+		response =
+			libusb_control_transfer(handle, 0x40, req, 0, index, buff, strlen(buff), 0);
 	} else {
-		response = libusb_control_transfer(handle, 0x40, req, 0,
-										   index, buff, 0, 0);
+		response =
+			libusb_control_transfer(handle, 0x40, req, 0, index, buff, 0, 0);
 	}
 
 	if (response < 0) {
