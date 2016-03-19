@@ -67,14 +67,14 @@ struct usbAccessory gadgetAccessory = {
 int main(int argc, char *argv[])
 {
 	pthread_t tid;
-	if(init() < 0)
+	if (init() < 0)
 		return;
 
 	if (setupAccessory() < 0) {
 		fprintf(stdout, "Error setting up accessory\n");
 		deInit();
 		return -1;
-	};
+	}
 	pthread_create(&tid, NULL, readHdlr, NULL);
 	pthread_join(tid, NULL);
 
@@ -88,7 +88,7 @@ void *readHdlr(void * threadarg)
 	int response, transferred;
 	unsigned char buffer[500000];
 
-	for(;;) {
+	for (;;) {
 		response =
 			libusb_bulk_transfer(handle, EP_IN, buffer, 500000, &transferred, 0);
 		if (response < 0) {
@@ -110,9 +110,12 @@ int init()
 	return 0;
 }
 
-int deInit(){
-	if(handle != NULL)
+int deInit()
+{
+	if (handle != NULL) {
 		libusb_release_interface(handle, 0);
+		libusb_close(handle);
+	}
 	libusb_exit(NULL);
 	return 0;
 }
@@ -123,7 +126,7 @@ int usbSendCtrl(char *buff, int req, int index)
 
 	if (NULL != buff) {
 		response =
-			libusb_control_transfer(handle, 0x40, req, 0, index, buff, strlen(buff), 0);
+			libusb_control_transfer(handle, 0x40, req, 0, index, buff, strlen(buff) + 1 , 0);
 	} else {
 		response =
 			libusb_control_transfer(handle, 0x40, req, 0, index, buff, 0, 0);
@@ -163,36 +166,37 @@ int setupAccessory()
 	
 	usleep(1000);//sometimes hangs on the next transfer :(
 
-	if(usbSendCtrl(gadgetAccessory.manufacturer, 52, 0) < 0) {
+	if (usbSendCtrl(gadgetAccessory.manufacturer, 52, 0) < 0) {
 		return -1;
 	}
-	if(usbSendCtrl(gadgetAccessory.modelName, 52, 1) < 0) {
+	if (usbSendCtrl(gadgetAccessory.modelName, 52, 1) < 0) {
 		return -1;
 	}
-	if(usbSendCtrl(gadgetAccessory.description, 52, 2) < 0) {
+	if (usbSendCtrl(gadgetAccessory.description, 52, 2) < 0) {
 		return -1;
 	}
-	if(usbSendCtrl(gadgetAccessory.version, 52, 3) < 0) {
+	if (usbSendCtrl(gadgetAccessory.version, 52, 3) < 0) {
 		return -1;
 	}
-	if(usbSendCtrl(gadgetAccessory.uri, 52, 4) < 0) {
+	if (usbSendCtrl(gadgetAccessory.uri, 52, 4) < 0) {
 		return -1;
 	}
-	if(usbSendCtrl(gadgetAccessory.serialNumber, 52, 5) < 0) {
+	if (usbSendCtrl(gadgetAccessory.serialNumber, 52, 5) < 0) {
 		return -1;
 	}
 
 
 	fprintf(stdout,"Accessory Identification sent\n");
 
-	if(usbSendCtrl(NULL, 53, 0) < 0) {
+	if (usbSendCtrl(NULL, 53, 0) < 0) {
 		return -1;
 	}
 
 	fprintf(stdout,"Attempted to put device into accessory mode\n");
 
-	if(handle != NULL)
+	if (handle != NULL) {
 		libusb_release_interface (handle, 0);
+	}
 
 	for (;;) {
 		tries--;
