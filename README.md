@@ -1,7 +1,7 @@
 Use libusb to emulate usb android open accesory
 
 @note:
-If you are on Ubuntu you will require libusb as well as the headers...
+If you are on Ubuntu you will require libusb as well as the headers
 sudo apt-get source libusb
 sudo apt-get install libusb-dev
 sudo apt-get install libusb-1.0-0-dev
