@@ -10,7 +10,7 @@
  * sudo apt-get install libusb-1.0-0-dev
  *
  * gcc usbacc.c -I/usr/include/ -o usbacc
- * -lusb-1.0 -I/usr/include/ -I/usr/include/libusb-1.0 -pthreaad
+ * -lusb-1.0 -I/usr/include/ -I/usr/include/libusb-1.0 -pthread
  *
  * @based
  * http://android.serverbox.ch/?p=262
@@ -85,9 +85,7 @@ int main(int argc, char *argv[])
 
 void *readHdlr(void * threadarg)
 {
-	struct libusb_pollfd **poll_usb; 
-	struct pollfd pollfd_array[20];
-	int poll_ret, i,j, response, transferred;
+	int response, transferred;
 	unsigned char buffer[500000];
 
 	for(;;) {
