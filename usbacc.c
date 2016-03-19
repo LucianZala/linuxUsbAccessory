@@ -9,8 +9,10 @@
  * sudo apt-get install libusb-dev
  * sudo apt-get install libusb-1.0-0-dev
  *
- * gcc usbacc.c -I/usr/include/ -o usbacc
- * -lusb-1.0 -I/usr/include/ -I/usr/include/libusb-1.0 -pthread
+ * add udev rules to /etc/udev/rules.d/51-android.rules:
+ * SUBSYSTEM=="usb", ATTR{idVendor}=="1004", MODE="0666", GROUP="plugdev"
+ * SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", MODE="0666", GROUP="plugdev" 
+ * sudo chmod a+r /etc/udev/rules.d/51-android.rules
  *
  * @based
  * http://android.serverbox.ch/?p=262
