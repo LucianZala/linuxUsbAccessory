@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #define EP_IN 0x81
-#define EP_OUT 0x07
+#define EP_OUT 0x02
 
 #define LG_VID 0x1004
 #define PID 0x633e
@@ -21,6 +21,7 @@
 #define ACCESSORY_PID 0x2d01
 #define ACCESSORY_PID_ALT 0x2d00
 
+#define AOA_BUFF_MAX 16384
 #define LEN 2
 
 int init(void);
@@ -29,7 +30,7 @@ int setupAccessory(void);
 int usbSendCtrl(char *buff, int req, int index);
 void error(int code);
 void status(int code);
-void *readHdlr(void * threadarg);
+void *usbRWHdlr(void * threadarg);
 
 struct libusb_device_handle* handle;
 char stop;
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
 		deInit();
 		return -1;
 	}
-	pthread_create(&tid, NULL, readHdlr, NULL);
+	pthread_create(&tid, NULL, usbRWHdlr, NULL);
 	pthread_join(tid, NULL);
 
 	deInit();
@@ -72,19 +73,29 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void *readHdlr(void * threadarg)
+void *usbRWHdlr(void * threadarg)
 {
 	int response, transferred;
-	unsigned char buffer[500000];
+	unsigned int index = 0;
+	unsigned char inBuff[AOA_BUFF_MAX] = {0};
+	unsigned char outBuff[AOA_BUFF_MAX] = {0};
 
 	for (;;) {
 		response =
-			libusb_bulk_transfer(handle, EP_IN, buffer, 500000, &transferred, 0);
+			libusb_bulk_transfer(handle, EP_IN, inBuff, sizeof(inBuff), &transferred, 0);
 		if (response < 0) {
 			error(response);
 			return NULL;
 		}
-		fprintf(stdout, "msg: %s\n", buffer);
+		fprintf(stdout, "msg: %s\n", inBuff);
+		sprintf(outBuff, "ACK: %07d", index++);
+		response =
+			libusb_bulk_transfer(handle, EP_OUT, outBuff, strlen(outBuff), &transferred, 0);
+		if (response < 0) {
+			error(response);
+			return NULL;
+		}
+		sleep(1);
     }
 }
 
@@ -142,7 +153,7 @@ int setupAccessory()
 		0, //wIndex
 		ioBuffer, //data
 		2, //wLength
-        0 //timeout
+		0 //timeout
 	);
 
 	if (response < 0) {
